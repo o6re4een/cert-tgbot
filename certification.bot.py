@@ -75,20 +75,20 @@ def handle_user_document_names(message):
 
 @bot.message_handler(func=lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_ENTER_NAME.value)
 def user_entering_score(message: telebot.types.Message):
-    bot.send_message(message.chat.id, "Вы указали имя давайте перейдем к баллам за олимпиаду ")
-    dbworker.set_state(message.chat.id, config.States.S_ENTER_SCORE.value)
+    bot.send_message(message.chat.id, "Вы указали имя давайте перейдем к названию мероприятия ")
+    dbworker.set_state(message.chat.id, config.States.S_ENTER_TITLE.value)
     user_data.get(str(message.chat.id))
     if(str(message.chat.id) not in user_data):
         user_data[str(message.chat.id)] = dict()
     user_data[str(message.chat.id)]['name'] = message.text
     # print(message.text)
 
-@bot.message_handler(func=lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_ENTER_SCORE.value)
+@bot.message_handler(func=lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_ENTER_TITLE.value)
 def user_entering_date(message):
     bot.send_message(message.chat.id, "Вы указали баллы введите дату мероприятия ")
     dbworker.set_state(message.chat.id, config.States.S_ENTER_DATE.value)
 
-    user_data[str(message.chat.id)]['score'] = message.text
+    user_data[str(message.chat.id)]['title'] = message.text
     
 
 
@@ -107,7 +107,8 @@ def pdf_sender_to(message):
     user_data = get_user_data(message.chat.id)
     
     certs = process_create_certificate([user_data])
-   
+    send_cert(certs, message)
+    
     
     # document_path='367289300_860.pdf'
     
