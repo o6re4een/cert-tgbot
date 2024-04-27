@@ -9,7 +9,8 @@ __pycache__/
 
 database.vdb
 /certificates
-
+/pdfs
+/txts
 # Distribution / packaging
 .Python
 build/

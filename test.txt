@@ -1,0 +1,10 @@
+Alice Smith; "Data Science Conference"; 2024-05-20
+Bob Johnson; "Machine Learning Workshop"; 2024-05-22
+Carol Martinez; "Cybersecurity Seminar"; 2024-06-05
+Dave Lee; "Blockchain Symposium"; 2024-06-10
+Emma White; "Artificial Intelligence Summit"; 2024-06-15
+Frank Brown; "Cloud Computing Bootcamp"; 2024-07-01
+Grace Davis; "UX/UI Design Conclave"; 2024-07-18
+Henry Wilson; "Internet of Things Forum"; 2024-07-25
+Isabella Garcia; "Software Development Retreat"; 2024-08-08
+Jack Miller; "Robotics Challenge"; 2024-08-14

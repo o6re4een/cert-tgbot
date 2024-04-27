@@ -11,3 +11,16 @@ class States(Enum):
     S_ENTER_DATE = "3" #Дата проведения
     S_ENTER_CONG = "4" #Успех
     S_SEND_DOCS = "5" #Отправка файла
+
+
+# class User():
+#     def __init__(self):
+#         self.name = ""
+#         self.score = ""
+#         self.date = ""
+    
+#     def set_state(self, value):
+#         self.state = value
+    
+# user = User("sdds", "dsads", "sdasd")
+# user.name = "sdad"
