@@ -3,7 +3,7 @@ import pytesseract
 import numpy as np
 import uuid
 pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
-
+import os
 def replace_text_in_image(image_path, template_str: str = '', replacement_str: str = ''):
     if template_str == '' or replacement_str == '':
         raise Exception('template_str or replacement_str is empty')
@@ -59,15 +59,15 @@ def replace_text_in_image(image_path, template_str: str = '', replacement_str: s
                 cv2.putText(img, replacement, (text_x, text_y), font, font_scale, (0, 0, 0), font_thickness)
                 break  # Прекращаем дальнейшую проверку, если замена произошла
 
-    unique_filename = str(uuid.uuid4()) + '_modified.jpg'
+    unique_filename = os.path.join('certificates', str(uuid.uuid4()) + '_modified.jpg')
     cv2.imwrite(unique_filename, img)
     return unique_filename
 
 # Пример использования
-input_image_path = "templates/FF0417-01-free-certificate-template-16x9-1.jpg"
-output_image_path = replace_text_in_image(
-    input_image_path,
-    template_str="Enter Name Here;SIGNATURE",
-    replacement_str="John Doe;aaaaa"
-)
-print(f"Изображение сохранено по пути: {output_image_path}")
+# input_image_path = "templates/FF0417-01-free-certificate-template-16x9-1.jpg"
+# output_image_path = replace_text_in_image(
+#     input_image_path,
+#     template_str="Enter Name Here;SIGNATURE",
+#     replacement_str="John Doe;aaaaa"
+# )
+# print(f"Изображение сохранено по пути: {output_image_path}")

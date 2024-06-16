@@ -5,7 +5,7 @@ import fitz
 import datetime
 from fitz import *
 
-
+from a import replace_text_in_image
 
 
 def image_to_pdf(image_path:str) -> str:
@@ -16,24 +16,13 @@ def image_to_pdf(image_path:str) -> str:
     path = pdf.output(output_path)
     return output_path
 
-def create_custom_cert(custom_template_path:str="", output_path:str = "", custom_search_text:str="", custom_data_text:str=""):
-    pdf_path = image_to_pdf(custom_template_path)
-    doc = fitz.open(pdf_path)
-    if (len(custom_data_text.split(';')) == len(custom_search_text.split(';'))):
-        for i in range(0, len(custom_search_text.split(';'))):
-            search_text = custom_search_text.split(';')[i]
-            replace_text = custom_data_text.split(';')[i]
-            for page in doc:
-                found_item: list[Shape]= page.search_for(search_text)
-                if(not found_item):
-                    print('not found', search_text)
-                    break
-                page.add_redact_annot(found_item[0], '')  # create redaction for text
-                page.apply_redactions()  # apply the redaction now
-                page.insert_textbox(found_item[0] , replace_text, fontsize=20, fontname="Helvetica", encoding=TEXT_ENCODING_LATIN, lineheight=0.8, align=TEXT_ALIGN_CENTER)
-                # page.save(output_path)
-    doc.save(output_path)
-    return True
+def create_custom_cert(custom_template_path:str="", custom_search_text:str="", custom_data_text:str=""):
+    output_path = replace_text_in_image(
+        custom_template_path,
+        custom_search_text,
+        custom_data_text
+        )
+    return output_path
 
 
 def create_certificate(name:str = "",title:str = "",date:str = "", template_path:str = "", output_path:str = ""):

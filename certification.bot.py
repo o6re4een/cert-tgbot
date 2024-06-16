@@ -22,6 +22,15 @@ bot = telebot.TeleBot(config.token)
 
 user_data: dict[str, dict[str, str]] = dict()
 
+
+@bot.message_handler(content_types=['sticker'])
+def handle_sticker(message):
+    bot.send_sticker(message.chat.id, "CAACAgIAAxkBAAEMU2VmbzZkQ7y1lmvzbxQAAS0Cc4lexaYAApAxAAKjzLBJAeLCgM2lnoE1BA")
+
+
+
+
+
 @bot.message_handler(commands=["start"])
 def cmd_start(message):
     bot.send_message(message.chat.id, "Привет я бот для создания сертификатов введите имя участника или пришлите данные в формате \n name title date \n name title date")
@@ -89,14 +98,12 @@ def handle_custom_certificate_replacement_str_generate_cert(message):
     custom_template_path = user_data[str(message.chat.id)]['custom_cert_template_path']
     custom_template_str = user_data[str(message.chat.id)]['custom_cert_template_str']
     custom_replacement_str = user_data[str(message.chat.id)]['custom_cert_replacement_str']
-
-    unique_filename = str(uuid.uuid4()) + '_' + 'AAAAAAAAAAAAAAAAA'
-    output_pdf_path = os.path.join(output_dir, f"{unique_filename}_certificate.pdf")
+    
     cert_path = create_custom_cert(
         custom_data_text=custom_replacement_str,
         custom_search_text=custom_template_str,
         custom_template_path=custom_template_path,
-        output_path=output_pdf_path
+        
     )
     send_cert([cert_path], message)
     reset_state(message)
