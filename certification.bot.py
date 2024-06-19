@@ -33,13 +33,13 @@ def handle_sticker(message):
 
 @bot.message_handler(commands=["start"])
 def cmd_start(message):
-    bot.send_message(message.chat.id, "Привет я бот для создания сертификатов введите имя участника или пришлите данные в формате .txt \n name title date \n name title date")
+    bot.send_message(message.chat.id, "Привет я бот для создания сертификатов введите имя участника или пришлите данные в формате .txt \n name;title;date \n name;title;date")
     dbworker.set_state(message.chat.id, config.States.S_ENTER_NAME.value)
     print(message.text)
 
 @bot.message_handler(commands=["reset"])
 def cmd_reset(message):
-    bot.send_message(message.chat.id, "Данные сброшены, давайте заново введите имя участника или пришлите данные в формате .txt \n name title date \n name title date")
+    bot.send_message(message.chat.id, "Данные сброшены, давайте заново введите имя участника или пришлите данные в формате .txt \n name;title;date \n name;title;date")
     dbworker.set_state(message.chat.id, config.States.S_ENTER_NAME.value)
     print(message.text)
     print("SSSDSADASD")
@@ -53,7 +53,7 @@ def start_sender(message):
 def process_custom_cert(message):
     dbworker.set_state(message.chat.id, config.States.S_CUSTOM_CERT_WAIT_FOR_TEMPLATE.value)
     bot.send_message(message.chat.id, "Вы приступили к созданию уникального сертификата \nВ процессе создания сертификата нужно будет отправить шаблон, затем отправить шаблонные выражения которые нужно заменить, затем отправить замену, разделение через  ;\nКоличество шаблонов и замен должно быть одинаково \nДля начала отправьте шаблон в формате фотографии \n ВАЖНО!!! ВСЕ ДАННЫЕ ПИСАТЬ НА ЛАТИНИЦЕ")
-
+    bot.send_message(message.chat.id, "Отправьте шаблон в формате сжатой или не сжатой фотографии")
 
 
 @bot.message_handler(func = lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_CUSTOM_CERT_WAIT_FOR_TEMPLATE.value, content_types=['photo', 'document'])
@@ -80,6 +80,8 @@ def handle_custom_certificate_template(message):
         user_data[str(message.chat.id)]['custom_cert_template_path'] = file_path
         dbworker.set_state(message.chat.id, config.States.S_CUSTOM_CERT_WAIT_FOR_TEMPLATE_STR.value)
         bot.send_message(message.chat.id, "Отлично, теперь введите шаблонные выражения, разделенные ; ")
+        bot.send_message(message.chat.id, "Пример: \n шаблон1;шаблон2;шаблон2")
+
     elif message.document is not None:
          
         # Get information about the document
@@ -110,6 +112,7 @@ def handle_custom_certificate_template_str(message):
     user_data[str(message.chat.id)]['custom_cert_template_str'] = message.text
     dbworker.set_state(message.chat.id, config.States.S_CUSTOM_CERT_WAIT_FOR_REPLACEMENT_STR.value)
     bot.send_message(message.chat.id, "Отлично, теперь введите замены, разделенные ; ")
+    bot.send_message(message.chat.id, "Или отправьте данные в формате .txt \n замена1;замена2;замена3 \n замена1;замена2;замена3")
 
 
 @bot.message_handler(func = lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_CUSTOM_CERT_WAIT_FOR_REPLACEMENT_STR.value, content_types=['text'])
@@ -130,8 +133,48 @@ def handle_custom_certificate_replacement_str_generate_cert(message):
     send_cert([cert_path], message)
     reset_state(message)
    
+@bot.message_handler(func = lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_CUSTOM_CERT_WAIT_FOR_REPLACEMENT_STR.value, content_types=['document'])
+def handle_custom_certificate_replacement_file(message):
+    # Check if the document is present in the message
+    if message.document is not None:
+        # Get information about the document
+        document_id = message.document.file_id
+        file_name = message.document.file_name
+        file_size = message.document.file_size
 
-#Обработка тексовых докуметов (batch processing) 
+        # Download the document
+        file_info = bot.get_file(document_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+
+        # Generate a unique filename for the document
+        unique_filename = str(uuid.uuid4()) + '_' + file_name
+
+        # Save the document with the unique filename
+        file_path = os.path.join(SAVE_TXTS_DIR, unique_filename)
+        with open(file_path, 'wb') as new_file:
+            new_file.write(downloaded_file)
+
+        user_cert_datas = read_txt_file_custom_cert(file_path)
+        custom_template_path = user_data[str(message.chat.id)]['custom_cert_template_path']
+        custom_template_str = user_data[str(message.chat.id)]['custom_cert_template_str']
+
+        cert_paths= []
+        bot.send_message(message.chat.id, "Отлично, приступаем к генерации сертификатов, ожидайте ...")
+        message_to_edit = bot.send_message(message.chat.id, f'Прогресс: 0/{len(user_cert_datas)}')
+        for user_cert_data in user_cert_datas:
+            cert_path = create_custom_cert(
+                custom_data_text=user_cert_data,
+                custom_search_text=custom_template_str,
+                custom_template_path=custom_template_path,
+                
+            )
+            cert_paths.append(cert_path)
+            bot.edit_message_text(f'Прогресс: {len(cert_paths)}/{len(user_cert_datas)}', message_to_edit.chat.id, message_to_edit.message_id)
+            
+        send_cert(cert_paths, message)
+        reset_state(message)
+
+#Обработка тексовых докуметов для готового шаблона (batch processing) 
 @bot.message_handler(func = lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_ENTER_NAME.value, content_types=['document'])
 def handle_user_document_names(message):
     # Check if the document is present in the message
@@ -243,7 +286,14 @@ def read_txt_file(file_path):
     return user_cert_datas
         
 
+def read_txt_file_custom_cert(file_path):
+    user_cert_datas = []
+    with open(file_path, 'r') as file:
+        lines = file.readlines()
+        for line in lines:
+           user_cert_datas.append(line.strip())
 
+    return user_cert_datas
 def get_user_data(chat_id):
     return user_data.get(str(chat_id))
 

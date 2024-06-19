@@ -4,7 +4,7 @@ from fpdf import FPDF
 import fitz  
 import datetime
 from fitz import *
-
+import uuid
 from a import replace_text_in_image
 
 
@@ -26,10 +26,7 @@ def create_custom_cert(custom_template_path:str="", custom_search_text:str="", c
 
 
 def create_certificate(name:str = "",title:str = "",date:str = "", template_path:str = "", output_path:str = ""):
-    # Открываем шаблонный PDF
-   
-    
-    
+    # Открываем шаблонный PDF  
    
     doc = fitz.open(template_path)
     for page in doc:
@@ -79,7 +76,8 @@ def process_create_certificate(participants_data: list[dict[str,str]]) -> list[s
     generated_certs = []
     # Генерируем сертификаты
     for participant in participants_data:
-        output_pdf_path = os.path.join(output_dir, f"{participant['name']}_certificate.pdf")
+        unique_filename = str(uuid.uuid4()) + '_certificate.pdf'
+        output_pdf_path = os.path.join(output_dir, unique_filename)
         is_generated = create_certificate(participant['name'], participant['title'], participant['date'], template_pdf, output_pdf_path)
         if(is_generated):
             generated_certs.append(output_pdf_path)
