@@ -1,0 +1,17 @@
+version: "3.7"
+services:
+  bot:
+    build: .
+    # comand: "python3 certification.bot.py"
+    env_file:
+      - ./.env
+    restart: always
+    depends_on:
+      - redis
+  redis:
+    image: redis:alpine
+    command:
+      - redis-server
+    restart: on-failure
+    ports:
+      - 6379
