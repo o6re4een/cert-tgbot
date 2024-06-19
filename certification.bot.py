@@ -1,5 +1,5 @@
 import telebot
-from cert_builder import process_create_certificate
+from cert_builder import process_create_certificate,create_custom_cert
 import config
 import dbworker
 import os
@@ -7,6 +7,8 @@ import uuid
 
 SAVE_DIR = 'pdfs'
 SAVE_TXTS_DIR = 'txts' 
+SAVE_TEMPLATE_DIR = 'templates'
+output_dir = "certificates"
 
 if not os.path.exists(SAVE_DIR):
     os.makedirs(SAVE_DIR)
@@ -20,23 +22,116 @@ bot = telebot.TeleBot(config.token)
 
 user_data: dict[str, dict[str, str]] = dict()
 
+
+@bot.message_handler(content_types=['sticker'])
+def handle_sticker(message):
+    bot.send_sticker(message.chat.id, "CAACAgIAAxkBAAEMU2VmbzZkQ7y1lmvzbxQAAS0Cc4lexaYAApAxAAKjzLBJAeLCgM2lnoE1BA")
+
+
+
+
+
 @bot.message_handler(commands=["start"])
 def cmd_start(message):
-    bot.send_message(message.chat.id, "Привет я бот для создания сертификатов введите имя участника или пришлите данные в формате \n name title date \n name title date")
+    bot.send_message(message.chat.id, "Привет я бот для создания сертификатов введите имя участника или пришлите данные в формате .txt \n name title date \n name title date")
     dbworker.set_state(message.chat.id, config.States.S_ENTER_NAME.value)
     print(message.text)
 
-bot.message_handler(commands=["reset"])
+@bot.message_handler(commands=["reset"])
 def cmd_reset(message):
-    bot.send_message(message.chat.id, "Вы в чем-то ошибилсь давайте заново введем")
+    bot.send_message(message.chat.id, "Данные сброшены, давайте заново введите имя участника или пришлите данные в формате .txt \n name title date \n name title date")
     dbworker.set_state(message.chat.id, config.States.S_ENTER_NAME.value)
     print(message.text)
+    print("SSSDSADASD")
   
 @bot.message_handler(commands=["sender"])
 def start_sender(message):
     bot.send_message(message.chat.id, "Давай пдфочку")
 
 
+@bot.message_handler(commands=["custom"])
+def process_custom_cert(message):
+    dbworker.set_state(message.chat.id, config.States.S_CUSTOM_CERT_WAIT_FOR_TEMPLATE.value)
+    bot.send_message(message.chat.id, "Вы приступили к созданию уникального сертификата \nВ процессе создания сертификата нужно будет отправить шаблон, затем отправить шаблонные выражения которые нужно заменить, затем отправить замену, разделение через  ;\nКоличество шаблонов и замен должно быть одинаково \nДля начала отправьте шаблон в формате фотографии \n ВАЖНО!!! ВСЕ ДАННЫЕ ПИСАТЬ НА ЛАТИНИЦЕ")
+
+
+
+@bot.message_handler(func = lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_CUSTOM_CERT_WAIT_FOR_TEMPLATE.value, content_types=['photo', 'document'])
+def handle_custom_certificate_template(message):
+    # Check if the document is present in the message
+    if message.photo is not None:
+        # Get information about the photo
+        file_info = bot.get_file(message.photo[-1].file_id)
+       
+
+        # Download the document
+        
+        downloaded_file = bot.download_file(file_info.file_path)
+
+        # Generate a unique filename for the document
+        unique_filename = str(uuid.uuid4()) + '_' + 'custom_cert_template.jpg'
+
+        file_path = os.path.join(SAVE_TEMPLATE_DIR, unique_filename)
+        with open(file_path, 'wb') as new_file:
+            new_file.write(downloaded_file)
+        user_data.get(str(message.chat.id))
+        if(str(message.chat.id) not in user_data):
+            user_data[str(message.chat.id)] = dict()
+        user_data[str(message.chat.id)]['custom_cert_template_path'] = file_path
+        dbworker.set_state(message.chat.id, config.States.S_CUSTOM_CERT_WAIT_FOR_TEMPLATE_STR.value)
+        bot.send_message(message.chat.id, "Отлично, теперь введите шаблонные выражения, разделенные ; ")
+    elif message.document is not None:
+         
+        # Get information about the document
+        document_id = message.document.file_id
+
+        # Download the document
+        file_info = bot.get_file(document_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+
+        # Generate a unique filename for the document
+        unique_filename = str(uuid.uuid4()) + '_' + 'custom_cert_template.jpg'
+
+        # Save the document with the unique filename
+        file_path = os.path.join(SAVE_TEMPLATE_DIR, unique_filename)
+        with open(file_path, 'wb') as new_file:
+            new_file.write(downloaded_file)
+        user_data.get(str(message.chat.id))
+        if(str(message.chat.id) not in user_data):
+            user_data[str(message.chat.id)] = dict()
+        user_data[str(message.chat.id)]['custom_cert_template_path'] = file_path
+        dbworker.set_state(message.chat.id, config.States.S_CUSTOM_CERT_WAIT_FOR_TEMPLATE_STR.value)
+        bot.send_message(message.chat.id, "Отлично, теперь введите шаблонные выражения, разделенные ; ")
+    else:
+        bot.send_message(message.chat.id, "Вы не прислали шаблон в формате фотографии, попробуйте отправить еще раз")
+
+@bot.message_handler(func = lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_CUSTOM_CERT_WAIT_FOR_TEMPLATE_STR.value, content_types=['text'])
+def handle_custom_certificate_template_str(message):
+    user_data[str(message.chat.id)]['custom_cert_template_str'] = message.text
+    dbworker.set_state(message.chat.id, config.States.S_CUSTOM_CERT_WAIT_FOR_REPLACEMENT_STR.value)
+    bot.send_message(message.chat.id, "Отлично, теперь введите замены, разделенные ; ")
+
+
+@bot.message_handler(func = lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_CUSTOM_CERT_WAIT_FOR_REPLACEMENT_STR.value, content_types=['text'])
+def handle_custom_certificate_replacement_str_generate_cert(message):
+    user_data[str(message.chat.id)]['custom_cert_replacement_str'] = message.text
+    
+    bot.send_message(message.chat.id, "Отлично, приступаем к генерации сертификатов, ожидайте ...")
+    custom_template_path = user_data[str(message.chat.id)]['custom_cert_template_path']
+    custom_template_str = user_data[str(message.chat.id)]['custom_cert_template_str']
+    custom_replacement_str = user_data[str(message.chat.id)]['custom_cert_replacement_str']
+    
+    cert_path = create_custom_cert(
+        custom_data_text=custom_replacement_str,
+        custom_search_text=custom_template_str,
+        custom_template_path=custom_template_path,
+        
+    )
+    send_cert([cert_path], message)
+    reset_state(message)
+   
+
+#Обработка тексовых докуметов (batch processing) 
 @bot.message_handler(func = lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_ENTER_NAME.value, content_types=['document'])
 def handle_user_document_names(message):
     # Check if the document is present in the message
@@ -85,7 +180,7 @@ def user_entering_score(message: telebot.types.Message):
 
 @bot.message_handler(func=lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_ENTER_TITLE.value)
 def user_entering_date(message):
-    bot.send_message(message.chat.id, "Вы указали баллы введите дату мероприятия ")
+    bot.send_message(message.chat.id, "Вы указали название введите дату мероприятия ")
     dbworker.set_state(message.chat.id, config.States.S_ENTER_DATE.value)
 
     user_data[str(message.chat.id)]['title'] = message.text
@@ -97,9 +192,10 @@ def user_entering_win(message):
     bot.send_message(message.chat.id, "Успех!")
     dbworker.set_state(message.chat.id, config.States.S_ENTER_CONG.value)
     user_data[str(message.chat.id)]['date'] = message.text
+    pdf_sender_to(message)
     # print(message.text)
 
-@bot.message_handler(func=lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_ENTER_CONG.value)
+# @bot.message_handler(func=lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_ENTER_CONG.value)
 def pdf_sender_to(message):
     bot.send_message(message.chat.id, "Files incoming")
     # data = dbworker.get_current_state(message.chat.id)
