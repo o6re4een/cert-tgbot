@@ -2,7 +2,7 @@ import cv2
 import pytesseract
 import numpy as np
 import uuid
-pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
+# pytesseract.pytesseract.tesseract_cmd = r'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
 import os
 def replace_text_in_image(image_path, template_str: str = '', replacement_str: str = ''):
     if template_str == '' or replacement_str == '':
@@ -52,7 +52,7 @@ def replace_text_in_image(image_path, template_str: str = '', replacement_str: s
                 font = cv2.FONT_HERSHEY_SIMPLEX
 
                 text_size = cv2.getTextSize(replacement, font, font_scale, font_thickness)[0]
-                text_x = x + int(text_size[0] / 2)
+                text_x = x 
                 text_y = y + text_size[1] 
                 print
 

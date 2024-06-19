@@ -33,13 +33,13 @@ def handle_sticker(message):
 
 @bot.message_handler(commands=["start"])
 def cmd_start(message):
-    bot.send_message(message.chat.id, "Привет я бот для создания сертификатов введите имя участника или пришлите данные в формате \n name title date \n name title date")
+    bot.send_message(message.chat.id, "Привет я бот для создания сертификатов введите имя участника или пришлите данные в формате .txt \n name title date \n name title date")
     dbworker.set_state(message.chat.id, config.States.S_ENTER_NAME.value)
     print(message.text)
 
 @bot.message_handler(commands=["reset"])
 def cmd_reset(message):
-    bot.send_message(message.chat.id, "Данные сброшены, давайте заново введите имя участника или пришлите данные в формате \n name title date \n name title date")
+    bot.send_message(message.chat.id, "Данные сброшены, давайте заново введите имя участника или пришлите данные в формате .txt \n name title date \n name title date")
     dbworker.set_state(message.chat.id, config.States.S_ENTER_NAME.value)
     print(message.text)
     print("SSSDSADASD")
@@ -52,11 +52,11 @@ def start_sender(message):
 @bot.message_handler(commands=["custom"])
 def process_custom_cert(message):
     dbworker.set_state(message.chat.id, config.States.S_CUSTOM_CERT_WAIT_FOR_TEMPLATE.value)
-    bot.send_message(message.chat.id, "Вы приступили к созданию уникального сертификата \n В процессе создания сертификата нужно будет отправить шаблон, затем отправить шаблонные выражения которые нужно заменить, затем отправить замену, \b разделение через  ; \b  \b \n Количество шаблонов и замен должно быть одинаково \n \b Для начала отправьте шаблон в формате фотографии  \n")
+    bot.send_message(message.chat.id, "Вы приступили к созданию уникального сертификата \nВ процессе создания сертификата нужно будет отправить шаблон, затем отправить шаблонные выражения которые нужно заменить, затем отправить замену, разделение через  ;\nКоличество шаблонов и замен должно быть одинаково \nДля начала отправьте шаблон в формате фотографии \n ВАЖНО!!! ВСЕ ДАННЫЕ ПИСАТЬ НА ЛАТИНИЦЕ")
 
 
 
-@bot.message_handler(func = lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_CUSTOM_CERT_WAIT_FOR_TEMPLATE.value, content_types=['photo'])
+@bot.message_handler(func = lambda message: dbworker.get_current_state(message.chat.id) == config.States.S_CUSTOM_CERT_WAIT_FOR_TEMPLATE.value, content_types=['photo', 'document'])
 def handle_custom_certificate_template(message):
     # Check if the document is present in the message
     if message.photo is not None:
@@ -71,6 +71,28 @@ def handle_custom_certificate_template(message):
         # Generate a unique filename for the document
         unique_filename = str(uuid.uuid4()) + '_' + 'custom_cert_template.jpg'
 
+        file_path = os.path.join(SAVE_TEMPLATE_DIR, unique_filename)
+        with open(file_path, 'wb') as new_file:
+            new_file.write(downloaded_file)
+        user_data.get(str(message.chat.id))
+        if(str(message.chat.id) not in user_data):
+            user_data[str(message.chat.id)] = dict()
+        user_data[str(message.chat.id)]['custom_cert_template_path'] = file_path
+        dbworker.set_state(message.chat.id, config.States.S_CUSTOM_CERT_WAIT_FOR_TEMPLATE_STR.value)
+        bot.send_message(message.chat.id, "Отлично, теперь введите шаблонные выражения, разделенные ; ")
+    elif message.document is not None:
+         
+        # Get information about the document
+        document_id = message.document.file_id
+
+        # Download the document
+        file_info = bot.get_file(document_id)
+        downloaded_file = bot.download_file(file_info.file_path)
+
+        # Generate a unique filename for the document
+        unique_filename = str(uuid.uuid4()) + '_' + 'custom_cert_template.jpg'
+
+        # Save the document with the unique filename
         file_path = os.path.join(SAVE_TEMPLATE_DIR, unique_filename)
         with open(file_path, 'wb') as new_file:
             new_file.write(downloaded_file)
